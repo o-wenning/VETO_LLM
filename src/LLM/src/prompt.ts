@@ -5,7 +5,7 @@ const REQUIRED = ["columns", "text"] as const;
 const OPTIONAL = ["output_format", "examples"] as const;
 const KNOWN: readonly string[] = [...REQUIRED, ...OPTIONAL];
 
-/** Description of the expected output, matching `buildResponseSchema`. Inserted for `{{output_format}}`. */
+/** Description of the expected output, matching `buildResponseSchema`. `{{output_format}}`. */
 export const OUTPUT_FORMAT_DESCRIPTION = `Gib ein JSON-Objekt der folgenden Form zurück:
 {"annotations": [{"attribute": "<Attributname>", "value": "<gefundener Wert>", "index": <Startindex>}]}
 - "attribute": exakt einer der oben genannten Attributnamen.
@@ -19,8 +19,7 @@ export function formatColumns(columns: ColumnSpec[]): string {
 }
 
 /**
- * Renders the examples section inserted for `{{examples}}`.
- * Returns an empty string if there are no examples; otherwise the section ends with a blank line.
+ * examples section `{{examples}}`.
  */
 export function formatExamples(examples: PromptExample[]): string {
   if (examples.length === 0) return "";
@@ -32,11 +31,6 @@ export function formatExamples(examples: PromptExample[]): string {
   return `BEISPIELE\n\n${blocks.join("\n\n")}\n\n`;
 }
 
-/**
- * Fills `{{columns}}`, `{{text}}` and the optional `{{output_format}}` and `{{examples}}` in the template.
- * Throws if a required placeholder is missing or an unknown one is present, or if examples are given
- * but the template has no `{{examples}}` placeholder.
- */
 export function fillPrompt(template: string, columns: ColumnSpec[], text: string, examples: PromptExample[] = []): string {
   const found = new Set<string>();
   for (const match of template.matchAll(PLACEHOLDER)) {

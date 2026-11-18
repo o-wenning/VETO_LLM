@@ -6,17 +6,12 @@ import type { AnnotationResult, ColumnSpec, InvalidHitHandler, LLMConfig, Prompt
 import { parseAndValidate } from "./validate";
 
 export interface AnnotateParams {
-  /** Prompt template containing {{columns}} and {{text}}. */
   template: string;
   columns: ColumnSpec[];
   text: string;
-  /** Annotated example texts inserted for {{examples}} (default: none). */
   examples?: PromptExample[];
-  /** Defaults to CURRENT_MODEL from models.ts. */
   config?: LLMConfig;
-  /** Optional provider override (e.g. for tests or custom backends). */
   provider?: LLMProvider;
-  /** Called for every invalid hit that is discarded (default: console.warn). */
   onInvalidHit?: InvalidHitHandler;
 }
 

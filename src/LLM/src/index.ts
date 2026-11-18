@@ -4,5 +4,5 @@ export { EXPERIMENT_CONFIG, type ExperimentConfig } from "./config";
 export { buildResponseSchema } from "./schema";
 export { parseAndValidate, findAllOccurrences, resolveStart, ResponseValidationError, warnInvalidHit } from "./validate";
 export { createProvider, OllamaProvider, DEFAULT_OLLAMA_URL, type LLMProvider } from "./providers";
-export { CURRENT_MODEL } from "./models";
+export { CURRENT_MODEL } from "./config";
 export type * from "./types";

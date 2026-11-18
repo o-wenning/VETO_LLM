@@ -11,7 +11,6 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
-/** Returns all start indices of `needle` in `text` (overlapping matches included). */
 export function findAllOccurrences(text: string, needle: string): number[] {
   const result: number[] = [];
   if (needle.length === 0) return result;
@@ -21,7 +20,6 @@ export function findAllOccurrences(text: string, needle: string): number[] {
   return result;
 }
 
-/** Start of `needle` at `index` if exact, otherwise the nearest occurrence; -1 if it does not occur. */
 export function resolveStart(text: string, needle: string, index: number): number {
   const occurrences = findAllOccurrences(text, needle);
   if (occurrences.length === 0) return -1;
@@ -33,12 +31,6 @@ export const warnInvalidHit: InvalidHitHandler = ({ position, hit, reason }) => 
   console.warn(`LLM annotation: discarded annotations[${position}]: ${reason}`, hit);
 };
 
-/**
- * Parses the raw LLM output. The structure must be an object with exactly the key `annotations`
- * holding an array; otherwise a `ResponseValidationError` is thrown.
- * Each hit must be {attribute, value, index} with a requested column and a value that occurs in the text;
- * invalid hits are discarded and reported to `onInvalidHit` (default: console.warn). Resolves start/end offsets.
- */
 export function parseAndValidate(
   raw: string,
   columns: ColumnSpec[],
@@ -76,7 +68,6 @@ export function parseAndValidate(
   return result;
 }
 
-/** Returns the resolved hit, or the reason why it is invalid. */
 function validateHit(hit: unknown, names: Set<string>, text: string): AnnotationHit | string {
   if (!isPlainObject(hit)) return "not an object.";
   const hitKeys = Object.keys(hit);
