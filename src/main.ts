@@ -35,7 +35,8 @@ import {
     faSun,
     faXmark,
     faSquare,
-    faTrash
+    faTrash,
+    faRobot
 } from "@fortawesome/free-solid-svg-icons"
 import { faCreativeCommonsZero } from "@fortawesome/free-brands-svg-icons"
 
@@ -69,7 +70,7 @@ library.add(
     faXmark,
     faSquare,
     faTrash,
-
+    faRobot,
     faCreativeCommonsZero,
 )
 

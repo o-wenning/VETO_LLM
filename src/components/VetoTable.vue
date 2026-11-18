@@ -434,15 +434,21 @@
                     <font-awesome-icon :icon="['fas', 'check']" size="2xl"></font-awesome-icon>
                   </button>
                 </span>
-                  <span v-else class="veto-container-item veto-action-button">
+                <span v-else class="veto-container-item veto-action-button">
                   <button class="veto-icon-2xl veto-inactive" title="Mark as checked" @click="checkRow(rowIndex, true)">
                     <font-awesome-icon :icon="['fas', 'xmark']" size="2xl"></font-awesome-icon>
                   </button>
                 </span>
-                  <span class="veto-container-item veto-action-button">
+                <span class="veto-container-item veto-action-button">
                   <button class="veto-icon-lg veto-neutral" title="Undo" @click="undo(rowIndex)"
                           :disabled="!vetoStore.hasChanges(rowIndex)">
                     <font-awesome-icon icon="fa-rotate-left" size="lg"></font-awesome-icon>
+                  </button>
+                </span>
+                <span class="veto-container-item veto-action-button">
+                  <button class="veto-icon-lg veto-active" title="AI annotation" @click="annotateWithAi(rowIndex)"
+                          :disabled="aiAnnotationRows.includes(rowIndex)">
+                    <font-awesome-icon icon="fa-solid fa-robot" size="lg"></font-awesome-icon>
                   </button>
                 </span>
                 </div>
@@ -723,6 +729,9 @@ import { hasConflict, hasEmptyValues, hasMissingValues } from "@/helper/value-va
 import { VetoColorScheme, VetoColorSchemeType } from "@/types/VetoColorScheme";
 import { FontSize } from "@/types/FontSize";
 
+import { runPrompt, example_document} from "@/components/LLMHelper";
+import { runAiAnnotation } from "@/helper/llm-annotation";
+
 
 export default defineComponent({
   name: 'VetoTable',
@@ -730,6 +739,8 @@ export default defineComponent({
   emits: ['scrollToPosition'],
   data() {
     return {
+      example_document,
+      aiAnnotationRows: [] as Array<number>,
       AttributeType,
       attributeSettingsData: {
         attributeName: '',
@@ -788,6 +799,18 @@ export default defineComponent({
   },
   methods: {
     validateMetaAttribute,
+    runPrompt,
+    async annotateWithAi(rowIndex: number) {
+      this.aiAnnotationRows.push(rowIndex);
+      try {
+        const result = await runAiAnnotation(this.data[rowIndex].text, this.columnData);
+        if (result !== null) {
+          this.vetoStore.overwriteAnnotations({rowIndex, hits: result});
+        }
+      } finally {
+        this.aiAnnotationRows = this.aiAnnotationRows.filter((i) => i !== rowIndex);
+      }
+    },
     calculateTableHeight() {
       const resizableWrap = document.getElementById('resizeableWrapper')!;
 

@@ -128,7 +128,8 @@
     </div>
 
     <!-- Text -->
-    <div class="overflow-auto p-2 flex-fill veto-text-surface" @mouseup="textSelected($event)" :style="{'text-align': textAlignment + ' !important'}">
+    <div class="overflow-auto p-2 flex-fill veto-text-surface" @mouseup="textSelected($event)" :style="{'text-align': textAlignment + ' !important'}"
+         @mousemove="updateHoverInfo($event)" @mouseleave="hoverInfo = null" @scroll="hoverInfo = null">
       <div style="position: relative;">
         <!-- Highlights of values -->
         <span class="w-100" :class="fontSize + '-font'" style="position: absolute; left: 0; top: 0;"
@@ -140,6 +141,10 @@
         <span class="w-100 veto-overlapped" ref="viewParagraph" :class="fontSize + '-font'" style="z-index: 2;"
               :style="viewStyle()" v-html="currentText"></span>
       </div>
+    </div>
+    <!-- Attribute names of the highlights under the cursor -->
+    <div v-if="hoverInfo" class="veto-hover-info" :style="{left: hoverInfo.x + 12 + 'px', top: hoverInfo.y + 16 + 'px'}">
+      {{ hoverInfo.text }}
     </div>
   </div>
 </template>
@@ -196,6 +201,7 @@ export default defineComponent({
     return {
       fontSize: FontSize.MEDIUM,
       FontSize,
+      hoverInfo: null as {text: string, x: number, y: number} | null,
       lineGap: 'auto' as LineGap,
       lineGaps: {
         'auto': 'Auto',
@@ -292,6 +298,22 @@ export default defineComponent({
     });
   },
   methods: {
+    /**
+     * The highlights lie below the transparent selection text and never receive mouse events,
+     * so the highlights under the cursor are determined by hit testing all layers.
+     */
+    updateHoverInfo(event: MouseEvent) {
+      const attributeNames: string[] = [];
+      for (const element of document.elementsFromPoint(event.clientX, event.clientY)) {
+        if (element instanceof HTMLElement && element.dataset.index !== undefined && element.title
+            && !attributeNames.includes(element.title)) {
+          attributeNames.push(element.title);
+        }
+      }
+      this.hoverInfo = attributeNames.length > 0
+        ? {text: attributeNames.join(', '), x: event.clientX, y: event.clientY}
+        : null;
+    },
     onImport() {
       this.clearSearch();
     },
@@ -833,7 +855,7 @@ export default defineComponent({
           for (const index in meta.included) {
             tagString += endTag();
           }
-          tagString += this.openTag(meta.color, tag.index, meta.max, meta.split ? 'left' : 'complete');
+          tagString += this.openTag(meta.color, tag.index, meta.max, meta.split ? 'left' : 'complete', '', tag.attributeName);
           for (const index of meta.included) {
             const splitIndexMeta = metadata[index];
             let part: Part | null = null;
@@ -843,7 +865,9 @@ export default defineComponent({
               splitIndexMeta.split = true;
               part = 'right';
             }
-            tagString += this.openTag(splitIndexMeta.color, index, metadata[index].max, part);
+            // index is "<attributeName>.<valueIndex>"
+            const attributeName = index.substring(0, index.lastIndexOf('.'));
+            tagString += this.openTag(splitIndexMeta.color, index, metadata[index].max, part, '', attributeName);
           }
         } else {
           tagString = endTag();
@@ -860,8 +884,9 @@ export default defineComponent({
         return '</span>'
       }
     },
-    openTag(color: string, index: string, size: number, part: Part, classNames: string = ''): string {
+    openTag(color: string, index: string, size: number, part: Part, classNames: string = '', title: string = ''): string {
       const idString = part == 'complete' || part == 'left' ? ` id="highlight-${index}"` : ''
+      const titleString = title ? ` title="${escapeHtmlAttribute(title)}"` : '';
 
       const padding = ((size + 1) * 0.30) - 0.15;
 
@@ -891,10 +916,14 @@ export default defineComponent({
         classStyle += ' ' + classNames;
       }
 
-      return `<span${idString} class="${classStyle}" style="color: white; background-color: ${color}; padding-top: ${padding}rem !important; padding-bottom: ${padding}rem !important;" data-index="${index}">`;
+      return `<span${idString}${titleString} class="${classStyle}" style="color: white; background-color: ${color}; padding-top: ${padding}rem !important; padding-bottom: ${padding}rem !important;" data-index="${index}">`;
     }
   }
 });
+
+function escapeHtmlAttribute(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
 const SI_UNITS = [
   // Base SI units
@@ -1007,6 +1036,18 @@ function doTestUnit(unit: string, text: string, end: number, prependSpace: boole
 </script>
 
 <style scoped>
+
+.veto-hover-info {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--veto-radius-md);
+  background: rgba(33, 37, 41, 0.92);
+  color: white;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
 
 #vetoView {
   border: 2px solid color-mix(in srgb, var(--veto-color-border) 82%, transparent);

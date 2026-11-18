@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import { acceptHMRUpdate, defineStore } from 'pinia'
 import { HighlightDict } from "@/types/HighlightDict";
 import Data, { DataAttributePart, MetaAttributeData } from '@/types/Data';
 import { AppSettings, ChangeAction, Changelog, RowChangelog, State } from "@/types/State";
@@ -11,6 +11,7 @@ import { hasConflict, hasEmptyValues, hasMissingValues, hasValidationRegExConfli
 import { AnnotationColorScheme } from "@/types/AnnotationColorScheme";
 import { DelimiterModes } from "@/types/FileData";
 import { TrimGroup, TrimState } from "@/types/TrimGroup";
+import type { AnnotationResult } from "@/LLM/src";
 
 export const useVetoStore = defineStore("veto", {
  state: (): State => ({
@@ -559,6 +560,42 @@ export const useVetoStore = defineStore("veto", {
     const newValue: boolean = this.data[index].currentData.checked == null ? true : !this.data[index].currentData.checked;
     this.updateCheckAll({index: index, value: newValue});
    },
+   /**
+    * Replaces all annotations and meta-attribute values of a row with the given AI annotation hits.
+    * Attributes without hits are reset to a single empty value. No changelog entry is created.
+    */
+   overwriteAnnotations(payload: {rowIndex: number, hits: AnnotationResult}) {
+     const row = this.data[payload.rowIndex].currentData;
+
+     for (const attributeName of Object.keys(this.columnData.attributes)) {
+       const values: DataAttributePart[] = payload.hits
+         .filter((hit) => hit.attribute === attributeName)
+         // Veto's end index is inclusive, the LLM module's is exclusive
+         .map((hit) => ({id: this.columnData.nextId++, start: hit.start, end: hit.end - 1, value: String(hit.value)}));
+       if (values.length === 0) {
+         values.push({id: this.columnData.nextId++, start: null, end: null, value: null});
+       }
+       row.attributes[attributeName] = values;
+     }
+
+     for (const attributeName of Object.keys(this.columnData.validMetaAttributes)) {
+       const values: MetaAttributeData[] = payload.hits
+         .filter((hit) => hit.attribute === attributeName)
+         .map((hit) => ({id: this.columnData.nextId++, value: String(hit.value)}));
+       if (values.length === 0) {
+         values.push({id: this.columnData.nextId++, value: null});
+       }
+       row.metaAttributes[attributeName] = values;
+     }
+
+     if (payload.rowIndex === this.currentRow) {
+       this.updateCurrentField(null);
+     }
+     if (this.hasMultipleValues() && !this.columnData.containsMultiValueAttributes) {
+       this.switchMultiValueView();
+     }
+     this.sortValues(this.currentValueOrder);
+   },
    updateExportedChanges(value: boolean) {
      this.changelog.exportedAllChanges = value;
      this.changelogSaved = saveChangelog(this.changelog);
@@ -608,6 +645,10 @@ export const useVetoStore = defineStore("veto", {
     }
  },
 });
+
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useVetoStore, import.meta.hot));
+}
 
 export function getDefaultSettings(): AppSettings {
   return {
