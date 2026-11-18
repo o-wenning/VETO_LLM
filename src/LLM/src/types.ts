@@ -14,6 +14,12 @@ export interface RawHit {
   index: number;
 }
 
+/** An already annotated text that is shown to the LLM as an example. */
+export interface PromptExample {
+  text: string;
+  annotations: RawHit[];
+}
+
 /**
  * A validated hit with resolved character offsets (`end` is exclusive).
  * `start` equals `index` if the LLM was exact; otherwise it is the nearest actual occurrence of `value`.

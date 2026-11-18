@@ -1,5 +1,6 @@
-import { annotate, ResponseValidationError, type AnnotationResult, type ColumnSpec } from "@/LLM/src";
+import { annotate, EXPERIMENT_CONFIG, ResponseValidationError, type AnnotationResult, type ColumnSpec, type PromptExample, type RawHit } from "@/LLM/src";
 import promptTemplate from "@/LLM/prompts/annotate.md?raw";
+import Data from "@/types/Data";
 import MetaData, { MetaAttributeType, ValidMetaAttribute } from "@/types/MetaData";
 
 function metaAttributeType(meta: ValidMetaAttribute): string {
@@ -27,12 +28,54 @@ export function buildColumnSpecs(metaData: MetaData): ColumnSpec[] {
   return [...attributes, ...metaAttributes];
 }
 
-/** Runs the LLM annotation for one text and logs the result to the console. */
-export async function runAiAnnotation(text: string, metaData: MetaData): Promise<AnnotationResult | null> {
+function exampleValue(value: string, type: string): string | number {
+  const num = Number(value);
+  return type === "number" && value.trim() !== "" && Number.isFinite(num) ? num : value;
+}
+
+/** Converts a row's current annotations into a prompt example. */
+export function rowToExample(row: Data, columns: ColumnSpec[]): PromptExample {
+  const types = new Map(columns.map((c) => [c.name, c.type]));
+  const annotations: RawHit[] = [];
+  for (const [name, parts] of Object.entries(row.currentData.attributes)) {
+    if (!types.has(name)) continue;
+    for (const part of parts) {
+      if (part.value === null || part.value === "" || part.start === null) continue;
+      annotations.push({ attribute: name, value: exampleValue(part.value, types.get(name)!), index: part.start });
+    }
+  }
+  for (const [name, values] of Object.entries(row.currentData.metaAttributes)) {
+    if (!types.has(name)) continue;
+    for (const meta of values) {
+      if (meta.value === null || meta.value === "") continue;
+      // Meta-attributes have no position; the LLM may only return values that occur in the text.
+      const index = row.text.indexOf(meta.value);
+      if (index === -1) continue;
+      annotations.push({ attribute: name, value: exampleValue(meta.value, types.get(name)!), index });
+    }
+  }
+  annotations.sort((a, b) => a.index - b.index);
+  return { text: row.text, annotations };
+}
+
+/** The first checked rows (at most `maxExamples`) except the row to be annotated. */
+export function collectExamples(data: Data[], rowIndex: number, columns: ColumnSpec[]): PromptExample[] {
+  return data
+    .filter((row, i) => i !== rowIndex && row.currentData.checked)
+    .slice(0, EXPERIMENT_CONFIG.maxExamples)
+    .map((row) => rowToExample(row, columns));
+}
+
+/** Runs the LLM annotation for one row and logs the result to the console. */
+export async function runAiAnnotation(data: Data[], rowIndex: number, metaData: MetaData): Promise<AnnotationResult | null> {
   const columns = buildColumnSpecs(metaData);
+  const examples = EXPERIMENT_CONFIG.useExamples ? collectExamples(data, rowIndex, columns) : [];
   console.log("AI annotation: columns", columns);
+  if (EXPERIMENT_CONFIG.useExamples) {
+    console.log("AI annotation: examples", examples);
+  }
   try {
-    const result = await annotate({ template: promptTemplate, columns, text });
+    const result = await annotate({ template: promptTemplate, columns, text: data[rowIndex].text, examples });
     console.log("AI annotation: result", result);
     return result;
   } catch (e) {

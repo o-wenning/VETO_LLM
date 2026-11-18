@@ -803,7 +803,7 @@ export default defineComponent({
     async annotateWithAi(rowIndex: number) {
       this.aiAnnotationRows.push(rowIndex);
       try {
-        const result = await runAiAnnotation(this.data[rowIndex].text, this.columnData);
+        const result = await runAiAnnotation(this.data, rowIndex, this.columnData);
         if (result !== null) {
           this.vetoStore.overwriteAnnotations({rowIndex, hits: result});
         }

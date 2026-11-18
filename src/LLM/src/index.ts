@@ -1,5 +1,6 @@
 export { annotate, type AnnotateParams } from "./annotate";
-export { fillPrompt, formatColumns, OUTPUT_FORMAT_DESCRIPTION } from "./prompt";
+export { fillPrompt, formatColumns, formatExamples, OUTPUT_FORMAT_DESCRIPTION } from "./prompt";
+export { EXPERIMENT_CONFIG, type ExperimentConfig } from "./config";
 export { buildResponseSchema } from "./schema";
 export { parseAndValidate, findAllOccurrences, resolveStart, ResponseValidationError, warnInvalidHit } from "./validate";
 export { createProvider, OllamaProvider, DEFAULT_OLLAMA_URL, type LLMProvider } from "./providers";

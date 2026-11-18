@@ -1,8 +1,8 @@
-import type { ColumnSpec } from "./types";
+import type { ColumnSpec, PromptExample } from "./types";
 
 const PLACEHOLDER = /\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g;
 const REQUIRED = ["columns", "text"] as const;
-const OPTIONAL = ["output_format"] as const;
+const OPTIONAL = ["output_format", "examples"] as const;
 const KNOWN: readonly string[] = [...REQUIRED, ...OPTIONAL];
 
 /** Description of the expected output, matching `buildResponseSchema`. Inserted for `{{output_format}}`. */
@@ -19,10 +19,25 @@ export function formatColumns(columns: ColumnSpec[]): string {
 }
 
 /**
- * Fills `{{columns}}`, `{{text}}` and the optional `{{output_format}}` in the template.
- * Throws if a required placeholder is missing or an unknown one is present.
+ * Renders the examples section inserted for `{{examples}}`.
+ * Returns an empty string if there are no examples; otherwise the section ends with a blank line.
  */
-export function fillPrompt(template: string, columns: ColumnSpec[], text: string): string {
+export function formatExamples(examples: PromptExample[]): string {
+  if (examples.length === 0) return "";
+  const blocks = examples.map(
+    (ex, i) =>
+      `Beispiel ${i + 1}:\n<EXAMPLE_DOCUMENT>\n${ex.text}\n</EXAMPLE_DOCUMENT>\n` +
+      `Erwartete Ausgabe:\n${JSON.stringify({ annotations: ex.annotations })}`,
+  );
+  return `BEISPIELE\n\n${blocks.join("\n\n")}\n\n`;
+}
+
+/**
+ * Fills `{{columns}}`, `{{text}}` and the optional `{{output_format}}` and `{{examples}}` in the template.
+ * Throws if a required placeholder is missing or an unknown one is present, or if examples are given
+ * but the template has no `{{examples}}` placeholder.
+ */
+export function fillPrompt(template: string, columns: ColumnSpec[], text: string, examples: PromptExample[] = []): string {
   const found = new Set<string>();
   for (const match of template.matchAll(PLACEHOLDER)) {
     const name = match[1];
@@ -35,11 +50,15 @@ export function fillPrompt(template: string, columns: ColumnSpec[], text: string
   if (missing.length > 0) {
     throw new Error(`Prompt template is missing placeholder(s): ${missing.map((m) => `{{${m}}}`).join(", ")}`);
   }
+  if (examples.length > 0 && !found.has("examples")) {
+    throw new Error("Examples were given, but the prompt template has no {{examples}} placeholder.");
+  }
 
   const values: Record<string, string> = {
     columns: formatColumns(columns),
     text,
     output_format: OUTPUT_FORMAT_DESCRIPTION,
+    examples: formatExamples(examples),
   };
   // Single pass so that placeholders inside the inserted text are not substituted again.
   return template.replace(PLACEHOLDER, (_, name: string) => values[name]);

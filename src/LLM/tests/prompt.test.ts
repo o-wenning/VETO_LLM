@@ -27,4 +27,22 @@ describe("fillPrompt", () => {
   it("fills the optional output_format placeholder", () => {
     expect(fillPrompt("{{columns}}{{text}}{{output_format}}", cols, "")).toContain(OUTPUT_FORMAT_DESCRIPTION);
   });
+
+  it("renders {{examples}} as an empty string without examples", () => {
+    expect(fillPrompt("A\n\n{{examples}}\nB{{columns}}{{text}}", cols, "")).toBe(`A\n\n\nB${formatColumns(cols)}`);
+  });
+
+  it("inserts examples with their expected output", () => {
+    const out = fillPrompt("{{examples}}{{columns}}{{text}}", cols, "x", [
+      { text: "Anna, 34", annotations: [{ attribute: "Name", value: "Anna", index: 0 }] },
+    ]);
+    expect(out).toContain("Beispiel 1:\n<EXAMPLE_DOCUMENT>\nAnna, 34\n</EXAMPLE_DOCUMENT>");
+    expect(out).toContain('{"annotations":[{"attribute":"Name","value":"Anna","index":0}]}');
+  });
+
+  it("throws if examples are given but the template has no {{examples}}", () => {
+    expect(() =>
+      fillPrompt("{{columns}}{{text}}", cols, "x", [{ text: "y", annotations: [] }]),
+    ).toThrow(/\{\{examples\}\}/);
+  });
 });

@@ -42,7 +42,7 @@ Attributes (name (data type)):
 
 {{output_format}}
 
-
+{{examples}}
 AKTUELLES MEDIZINISCHES DOKUMENT
 
 Der folgende Text ist die einzige zulässige Datenquelle für die Extraktion.

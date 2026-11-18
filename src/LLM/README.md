@@ -22,7 +22,15 @@ const result = await annotate({
 ### Prompt template
 - Placeholders: `{{columns}}` (rendered as `- name (type)` lines) and `{{text}}` are required.
 - `{{output_format}}` is optional and is replaced by `OUTPUT_FORMAT_DESCRIPTION` (describes the JSON format below).
+- `{{examples}}` is optional and is replaced by the `examples` passed to `annotate` (document + expected JSON output);
+  without examples it is replaced by an empty string. Passing examples to a template without `{{examples}}` throws.
 - Unknown placeholders throw.
+
+### Experiment settings (`src/config.ts`)
+| Field | Description |
+|---|---|
+| `useExamples` | If `true`, Veto adds the first checked texts (excluding the annotated one) with their annotations as examples to the prompt. Default `false` (no examples). |
+| `maxExamples` | Maximum number of examples (default `2`). |
 
 ### Response
 - The LLM is constrained via Ollama structured outputs (`format` = JSON schema).
