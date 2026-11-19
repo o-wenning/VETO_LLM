@@ -6,7 +6,7 @@ export interface ExperimentConfig {
 }
 
 export const EXPERIMENT_CONFIG: ExperimentConfig = {
-  useExamples: true,
+  useExamples: false,
   maxExamples: 2,
 };
 

@@ -45,3 +45,11 @@ export interface CompletionRequest {
   prompt: string;
   schema: Record<string, unknown>;
 }
+
+export interface VLLMConfig {
+  baseUrl?: string;
+  model: string;
+  apiKey?: string;
+  timeoutMs?: number;
+  options?: Record<string, unknown>;
+}
